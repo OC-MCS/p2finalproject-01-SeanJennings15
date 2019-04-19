@@ -1,84 +1,61 @@
-//=========================================================
-// This is just the starting point for your final project.
-// You are expected to modify and add classes/files as needed.
-// The code below is the original code for our first graphics
-// project (moving the little green ship). 
-//========================================================
+//================================================
+// Sean Jennings
+// Programming 2
+// Assignment 7 (Final Project): Game
+// 4-19-19
+//================================================
 #include <iostream>
 using namespace std;
 #include <SFML/Graphics.hpp>
 using namespace sf; 
-
-//============================================================
-// YOUR HEADER WITH YOUR NAME GOES HERE. PLEASE DO NOT FORGET THIS
-//============================================================
-
-// note: a Sprite represents an image on screen. A sprite knows and remembers its own position
-// ship.move(offsetX, offsetY) adds offsetX, offsetY to 
-// the current position of the ship. 
-// x is horizontal, y is vertical. 
-// 0,0 is in the UPPER LEFT of the screen, y increases DOWN the screen
-void moveShip(Sprite& ship)
-{
-	const float DISTANCE = 5.0;
-
-	if (Keyboard::isKeyPressed(Keyboard::Left))
-	{
-		// left arrow is pressed: move our ship left 5 pixels
-		// 2nd parm is y direction. We don't want to move up/down, so it's zero.
-		ship.move(-DISTANCE, 0);
-	}
-	else if (Keyboard::isKeyPressed(Keyboard::Right))
-	{
-		// right arrow is pressed: move our ship right 5 pixels
-		ship.move(DISTANCE, 0);
-	}
-}
-
+#include <list>
+#include "UI.h"
+#include "ship.h"
+#include "spriteMgr.h"
+#include "enemyGroup.h"
 
 
 int main()
 {
+	//declaring the drawing window's size and frame rate
 	const int WINDOW_WIDTH = 800;
 	const int WINDOW_HEIGHT = 600;
-
 	RenderWindow window(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "aliens!");
-	// Limit the framerate to 60 frames per second
-	window.setFramerateLimit(60);
-
-	// load textures from file into memory. This doesn't display anything yet.
-	// Notice we do this *before* going into animation loop.
-	Texture shipTexture;
-	if (!shipTexture.loadFromFile("ship.png"))
-	{
-		cout << "Unable to load ship texture!" << endl;
-		exit(EXIT_FAILURE);
-	}
-	Texture starsTexture;
-	if (!starsTexture.loadFromFile("stars.jpg"))
-	{
-		cout << "Unable to load stars texture!" << endl;
-		exit(EXIT_FAILURE);
-	}
-
-	// A sprite is a thing we can draw and manipulate on the screen.
-	// We have to give it a "texture" to specify what it looks like
-
-	Sprite background;
-	background.setTexture(starsTexture);
-	// The texture file is 640x480, so scale it up a little to cover 800x600 window
-	background.setScale(1.5, 1.5);
-
-	// create sprite and texture it
-	Sprite ship;
-	ship.setTexture(shipTexture);
-
-
+	window.setFramerateLimit(60);		// Limit the framerate to 60 frames per second
+	
+	//declaring managers for each of my classes that will be used in main
+	SpriteMgr spriteMgr;
+	UI UImgr;
+	
+	Sprite background = spriteMgr.getBackgroundSprite();	
+	
 	// initial position of the ship will be approx middle of screen
 	float shipX = window.getSize().x / 2.0f;
-	float shipY = window.getSize().y / 2.0f;
-	ship.setPosition(shipX, shipY);
+	float shipY = window.getSize().y / 1.1f; //2.0
+	Ship ship(background, spriteMgr, shipX, shipY);
 
+	//manager for the class of all the aliens as a whole
+	EnemyGroup groupMgr(spriteMgr, UImgr, ship);
+	
+	Event startUpMenu; //used for initial start up menu and for the menu after a won/lost game
+
+	while (window.isOpen() && !UImgr.getIsRunGame())
+	{
+		window.draw(background);
+		window.draw(UImgr.getStartButton());
+		UImgr.draw(window);
+		while (window.pollEvent(startUpMenu))
+		{
+			if (startUpMenu.type == Event::Closed)
+				window.close();
+			else if (startUpMenu.type == Event::MouseButtonReleased)
+			{
+				Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));	//position of mouse
+				UImgr.setIsRunGame(UImgr.handleMouseUp(mousePos));
+			}
+		}
+		window.display();
+	}
 
 	while (window.isOpen())
 	{
@@ -93,42 +70,65 @@ int main()
 				window.close();
 			else if (event.type == Event::KeyPressed)
 			{
-				if (event.key.code == Keyboard::Space)
+				if ((event.key.code == Keyboard::Space) && (ship.getMissileCount() < 5))
 				{
-					// handle space bar
+					ship.fireMissile();
 				}
-				
 			}
+			/*if (event.type == Event::MouseButtonReleased)
+			{
+				UImgr.moustButtonReleased(window.mapPixelToCoords(Mouse::getPosition(window)));
+			}*/
 		}
+		window.clear();
+		if (UImgr.isGameRunning())
+		{
+			if (UImgr.resetLevel())
+			{
+				groupMgr.resetAliens();
+				ship.resetShip();
+			}
 
-		//===========================================================
-		// Everything from here to the end of the loop is where you put your
-		// code to produce ONE frame of the animation. The next iteration of the loop will
-		// render the next frame, and so on. All this happens ~ 60 times/second.
-		//===========================================================
+			// draw background first, so everything that's drawn later 
+			// will appear on top of background
+			window.draw(background);
+			
+			ship.moveShip();
+			ship.moveMissileList();
+			ship.draw(window);
 
-		// draw background first, so everything that's drawn later 
-		// will appear on top of background
-		window.draw(background);
+			groupMgr.moveAliens(window);
+			groupMgr.drawAliens(window);
+			groupMgr.dropBombs();
+			groupMgr.moveBombs(window);
+			groupMgr.drawBombs(window);
+			groupMgr.handleHit();
 
-		moveShip(ship);
+			UImgr.showStats(window);
+		}
+		else
+		{
+			while (window.isOpen() && !UImgr.getIsRunGame())
+			{	
+				window.draw(background);
+				UImgr.drawMenu(window);
+				window.draw(UImgr.getStartButton());
 
-		// draw the ship on top of background 
-		// (the ship from previous frame was erased when we drew background)
-		window.draw(ship);
-
-
-		// end the current frame; this makes everything that we have 
-		// already "drawn" actually show up on the screen
+				while (window.pollEvent(startUpMenu))
+				{
+					if (startUpMenu.type == Event::Closed)
+						window.close();
+					else if (startUpMenu.type == Event::MouseButtonReleased)
+					{
+						Vector2f mousePos = window.mapPixelToCoords(Mouse::getPosition(window));	//position of mouse
+						UImgr.setIsRunGame(UImgr.handleMouseUp(mousePos));
+					}
+				}
+				window.display();
+			}
+			UImgr.resetUImgr();
+		}
 		window.display();
-
-		// At this point the frame we have built is now visible on screen.
-		// Now control will go back to the top of the animation loop
-		// to build the next frame. Since we begin by drawing the
-		// background, each frame is rebuilt from scratch.
-
 	} // end body of animation loop
-
 	return 0;
 }
-

@@ -146,10 +146,32 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Bomb.cpp" />
+    <ClCompile Include="enemy.cpp" />
+    <ClCompile Include="enemyGroup.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="missile.cpp" />
+    <ClCompile Include="ship.cpp" />
+    <ClCompile Include="spriteMgr.cpp" />
+    <ClCompile Include="UI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="bombTexture.jpg" />
+    <Image Include="enemySprite2.jpg" />
+    <Image Include="enemyTexture.png" />
+    <Image Include="missileTexture.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Bomb.h" />
+    <ClInclude Include="enemy.h" />
+    <ClInclude Include="enemyGroup.h" />
+    <ClInclude Include="missile.h" />
+    <ClInclude Include="ship.h" />
+    <ClInclude Include="spriteMgr.h" />
+    <ClInclude Include="UI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
